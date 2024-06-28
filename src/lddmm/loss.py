@@ -1,5 +1,11 @@
 import torch
-from src.lddmm.utils import GaussKernel, GaussLinKernel, Shooting, Hamiltonian
+
+from src.lddmm.utils import (
+    GaussKernel,
+    GaussLinKernel,
+    Hamiltonian,
+    Shooting,
+)
 
 
 class LDDMMLoss:

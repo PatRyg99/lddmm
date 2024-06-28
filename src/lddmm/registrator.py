@@ -1,10 +1,12 @@
 import os
+
 from typing import Callable
 
 import pyvista as pv
-from tqdm.auto import tqdm
 import torch
+
 from torch.types import _dtype
+from tqdm.auto import tqdm
 
 from src.lddmm.loss import LDDMMLoss
 from src.lddmm.utils import Shooting
