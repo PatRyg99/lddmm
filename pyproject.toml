@@ -1,0 +1,70 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lddmm"
+version = "1.0.0"
+description = "LDDMM with PyTorch and KeOps"
+readme = "README.md"
+authors = [{ name = "Patryk Rygiel" }]
+requires-python = ">= 3.11"
+
+dependencies = [
+    "torch ~= 2.1",
+    "pykeops ~= 2.2",
+    "numpy ~= 1.24",
+    "pyvista ~= 0.42",
+]
+
+[project.optional-dependencies]
+jupyter = [
+    "jupyterlab~=3.6",
+    "pandas ~= 2.0",
+    "matplotlib ~= 3.7",
+    "seaborn ~= 0.12",
+    "plotly ~= 5.14",
+    "trame ~= 3.3",
+    "trame-vtk ~= 2.6",
+    "trame-vuetify ~= 2.3",
+    "ipywidgets ~= 8.1",
+]
+lint = [
+    "black ~= 22.6",
+    "autoflake ~= 1.4",
+    "flake8 ~= 4.0",
+    "flake8-docstrings ~= 1.6",
+    "pyproject-flake8 ~= 0.0.1a4",
+    "isort ~= 5.10",
+    "pymarkdownlnt ~= 0.9",
+    "pre-commit ~= 2.20",
+]
+dev = ["lddmm[jupyter, lint]"]
+
+[project.urls]
+"Source" = "https://github.com/PatRyg99/lddmm"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line_length = 120
+
+[tool.flake8]
+extend_exclude = [".venv/", "build/", "dist/", "docs/"]
+per_file_ignores = ["**/_[a-z]*.py:D", "tests/*.py:D", "*.pyi:D"]
+ignore = [
+    "D", # pydocstyle
+    "E", # pycodestyle
+    "W", # pycodestyle
+]
+ignore_decorators = "property" # https://github.com/PyCQA/pydocstyle/pull/546
+
+[tool.isort]
+profile = "black"
+line_length = 120
+order_by_type = true
+lines_between_types = 1
+combine_as_imports = true
+force_grid_wrap = 2
+known_first_party = "lddmm"
