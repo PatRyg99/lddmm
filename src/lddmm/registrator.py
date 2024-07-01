@@ -8,8 +8,7 @@ import torch
 from torch.types import _dtype
 from tqdm.auto import tqdm
 
-from src.lddmm.loss import LDDMMLoss
-from src.lddmm.utils import Shooting
+from src.lddmm.loss import LDDMMLoss, VarifoldDataLoss
 
 
 class LDDMMRegistrator:
@@ -18,14 +17,14 @@ class LDDMMRegistrator:
         source_mesh: pv.PolyData,
         target_mesh: pv.PolyData,
         sigma: float,
-        loss_func: Callable = LDDMMLoss,
+        dataloss: Callable = VarifoldDataLoss,
         dtype: _dtype = torch.float32,
         device: str = "cpu",
     ):
         self.source_mesh = source_mesh
         self.target_mesh = target_mesh
         self.sigma = sigma
-        self.loss_func = loss_func
+        self.dataloss = dataloss
         self.dtype = dtype
         self.device = device
 
@@ -39,7 +38,7 @@ class LDDMMRegistrator:
         self.q0 = VS.clone().requires_grad_(True)
         self.p0 = torch.zeros(self.q0.shape, dtype=self.dtype, device=self.device, requires_grad=True)
         self.optimizer = torch.optim.LBFGS([self.p0], max_eval=10, max_iter=10)
-        self.loss = self.loss_func(FS, VT, FT, sigma)
+        self.loss = LDDMMLoss(self.dataloss(FS, VT, FT, sigma), sigma)
 
     def _prepare_mesh(self, mesh: pv.PolyData, dtype: _dtype = torch.FloatType, device: str = "cpu"):
         V, F = mesh.points, mesh.regular_faces
@@ -62,11 +61,11 @@ class LDDMMRegistrator:
                 self.optimizer.step(closure)
                 pbar.update(1)
 
-    def shoot(self, nt: int = 15):
-        return Shooting(self.p0, self.q0, self.loss.Kv, nt=nt)
+    def shoot(self, nt: int = 10, deltat: float = 1.0):
+        return self.loss.integrator.shoot(self.p0, self.q0, nt=nt, deltat=deltat)
 
-    def export_shoot(self, output_dir: str, nt: int = 15):
-        listpq = self.shoot(nt)
+    def export_shoot(self, output_dir: str, nt: int = 10, deltat: float = 1.0):
+        listpq = self.shoot(nt, deltat)
 
         os.makedirs(output_dir, exist_ok=True)
         for i, VS in enumerate(listpq):

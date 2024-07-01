@@ -1,21 +1,15 @@
+from typing import Callable
+
 import torch
 
-from src.lddmm.utils import (
-    GaussKernel,
-    GaussLinKernel,
-    Hamiltonian,
-    Shooting,
-)
+from src.lddmm.utils import GaussLinKernel, RalstonIntegrator
 
 
-class LDDMMLoss:
-    def __init__(self, FS: torch.tensor, VT: torch.tensor, FT: torch.tensor, sigma: torch.tensor, gamma: float = 0):
-        self.sigma = sigma
-        self.gamma = gamma
-        self.Kv = GaussKernel(sigma=sigma)
-        self.dataloss = self._init_dataloss(FS, VT, FT, GaussLinKernel(sigma=sigma))
+class VarifoldDataLoss:
+    def __init__(self, FS: torch.tensor, VT: torch.tensor, FT: torch.tensor, sigma: torch.tensor):
+        self.loss = self._prepare(FS, VT, FT, GaussLinKernel(sigma=sigma))
 
-    def _init_dataloss(self, FS: torch.tensor, VT: torch.tensor, FT: torch.tensor, K: torch.tensor):
+    def _prepare(self, FS: torch.tensor, VT: torch.tensor, FT: torch.tensor, K: torch.tensor):
         def get_center_length_normal(F, V):
             V0, V1, V2 = (
                 V.index_select(0, F[:, 0]),
@@ -35,6 +29,18 @@ class LDDMMLoss:
 
         return loss
 
+    def __call__(self, q: torch.tensor):
+        return self.loss(q)
+
+
+class LDDMMLoss:
+    def __init__(self, dataloss: Callable, sigma: torch.tensor, gamma: float = 0):
+        self.sigma = sigma
+        self.gamma = gamma
+        self.dataloss = dataloss
+
+        self.integrator = RalstonIntegrator.with_gauss_kernel(sigma)
+
     def __call__(self, p0: torch.tensor, q0: torch.tensor):
-        _, q = Shooting(p0, q0, self.Kv)[-1]
-        return self.gamma * Hamiltonian(self.Kv)(p0, q0) + self.dataloss(q)
+        _, q = self.integrator.shoot(p0, q0)[-1]
+        return self.gamma * self.integrator.ode_system.base(p0, q0) + self.dataloss(q)

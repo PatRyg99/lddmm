@@ -1,4 +1,6 @@
 .vscode
+.DS_Store
+*.vtp
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

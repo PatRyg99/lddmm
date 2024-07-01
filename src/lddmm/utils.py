@@ -1,3 +1,7 @@
+from typing import Callable
+
+import torch
+
 from pykeops.torch import Vi, Vj
 from torch.autograd import grad
 
@@ -18,15 +22,30 @@ def GaussLinKernel(sigma):
     return (K * b).sum_reduction(axis=1)
 
 
-def RalstonIntegrator():
-    def f(ODESystem, x0, nt, deltat=1.0):
+class HamiltonianSystem:
+    def __init__(self, K: Callable):
+        self.K = K
+
+        # Hamiltonia
+        self.base = lambda p, q: 0.5 * (p * self.K(q, q, p)).sum()
+
+    def __call__(self, p: torch.tensor, q: torch.tensor):
+        Gp, Gq = grad(self.base(p, q), (p, q), create_graph=True)
+        return -Gq, Gp
+
+
+class RalstonIntegrator:
+    def __init__(self, ode_system: Callable):
+        self.ode_system = ode_system
+
+    def __call__(self, x0: torch.tensor, nt: int = 10, deltat: float = 1.0):
         x = tuple(map(lambda x: x.clone(), x0))
         dt = deltat / nt
         l = [x]
         for _ in range(nt):
-            xdot = ODESystem(*x)
+            xdot = self.ode_system(*x)
             xi = tuple(map(lambda x, xdot: x + (2 * dt / 3) * xdot, x, xdot))
-            xdoti = ODESystem(*xi)
+            xdoti = self.ode_system(*xi)
             x = tuple(
                 map(
                     lambda x, xdot, xdoti: x + (0.25 * dt) * (xdot + 3 * xdoti),
@@ -38,34 +57,11 @@ def RalstonIntegrator():
             l.append(x)
         return l
 
-    return f
+    def shoot(self, p0: torch.tensor, q0: torch.tensor, nt: int = 10, deltat: float = 1.0):
+        return self((p0, q0), nt, deltat)
 
-
-def Hamiltonian(K):
-    def H(p, q):
-        return 0.5 * (p * K(q, q, p)).sum()
-
-    return H
-
-
-def HamiltonianSystem(K):
-    H = Hamiltonian(K)
-
-    def HS(p, q):
-        Gp, Gq = grad(H(p, q), (p, q), create_graph=True)
-        return -Gq, Gp
-
-    return HS
-
-
-def Shooting(p0, q0, K, nt=10, Integrator=RalstonIntegrator()):
-    return Integrator(HamiltonianSystem(K), (p0, q0), nt)
-
-
-def Flow(x0, p0, q0, K, deltat=1.0, Integrator=RalstonIntegrator()):
-    HS = HamiltonianSystem(K)
-
-    def FlowEq(x, p, q):
-        return (K(x, q, p),) + HS(p, q)
-
-    return Integrator(FlowEq, (x0, p0, q0), deltat)[0]
+    @classmethod
+    def with_gauss_kernel(cls, sigma: torch.tensor):
+        K = GaussKernel(sigma)
+        H = HamiltonianSystem(K)
+        return cls(H)
