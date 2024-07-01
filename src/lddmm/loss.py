@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, Dict
 
 import torch
 
@@ -32,15 +32,28 @@ class VarifoldDataLoss:
     def __call__(self, q: torch.tensor):
         return self.loss(q)
 
-
 class LDDMMLoss:
-    def __init__(self, dataloss: Callable, sigma: torch.tensor, gamma: float = 0):
+    def __init__(self, dataloss: Callable, sigma: torch.tensor, timestep: int = -1, gamma: float = 0):
         self.sigma = sigma
+        self.timestep = timestep
         self.gamma = gamma
         self.dataloss = dataloss
 
         self.integrator = RalstonIntegrator.with_gauss_kernel(sigma)
 
     def __call__(self, p0: torch.tensor, q0: torch.tensor):
-        _, q = self.integrator.shoot(p0, q0)[-1]
+        _, q = self.integrator.shoot(p0, q0)[self.timestep]
         return self.gamma * self.integrator.ode_system.base(p0, q0) + self.dataloss(q)
+
+class MultiLDDMMLoss:
+    def __init__(self, datalosses: Dict[int, LDDMMLoss], sigma: torch.tensor, gamma: float = 0):
+        self.datalosses = datalosses
+        self.sigma = sigma
+        self.gamma = gamma
+
+        self.integrator = RalstonIntegrator.with_gauss_kernel(sigma)
+
+    def __call__(self, p0: torch.tensor, q0: torch.tensor, nt: int = 10):
+        _, q = self.integrator.shoot(p0, q0, nt=nt)
+        dataloss_mean = torch.cat([dataloss(q[t]) for t, dataloss in self.datalosses.items()]).mean()
+        return self.gamma * self.integrator.ode_system.base(p0, q0) + dataloss_mean
