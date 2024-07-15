@@ -54,6 +54,6 @@ class MultiLDDMMLoss:
         self.integrator = RalstonIntegrator.with_gauss_kernel(sigma)
 
     def __call__(self, p0: torch.tensor, q0: torch.tensor, nt: int = 10):
-        _, q = self.integrator.shoot(p0, q0, nt=nt)
-        dataloss_mean = torch.cat([dataloss(q[t]) for t, dataloss in self.datalosses.items()]).mean()
+        shots = self.integrator.shoot(p0, q0, nt=nt)
+        dataloss_mean = torch.stack([dataloss(shots[t][1]) for t, dataloss in self.datalosses.items()]).mean()
         return self.gamma * self.integrator.ode_system.base(p0, q0) + dataloss_mean
