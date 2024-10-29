@@ -8,8 +8,8 @@ import torch
 from torch.types import _dtype
 from tqdm.auto import tqdm
 
-from src.lddmm.loss import LDDMMLoss
-from src.lddmm.utils import Shooting
+from lddmm.loss import LDDMMLoss
+from lddmm.utils import Shooting
 
 
 class LDDMMRegistrator:
