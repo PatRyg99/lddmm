@@ -35,6 +35,6 @@ class LDDMMLoss:
 
         return loss
 
-    def __call__(self, p0: torch.tensor, q0: torch.tensor):
-        _, q = Shooting(p0, q0, self.Kv)[-1]
+    def __call__(self, p0: torch.tensor, q0: torch.tensor, nt: int):
+        _, q = Shooting(p0, q0, self.Kv, nt=nt)[-1]
         return self.gamma * Hamiltonian(self.Kv)(p0, q0) + self.dataloss(q)

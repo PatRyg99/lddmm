@@ -48,12 +48,12 @@ class LDDMMRegistrator:
 
         return V, F
 
-    def optimize(self, iters: int):
+    def optimize(self, iters: int, nt: int):
         with tqdm(total=iters) as pbar:
 
             def closure():
                 self.optimizer.zero_grad()
-                L = self.loss(self.p0, self.q0)
+                L = self.loss(self.p0, self.q0, nt)
                 L.backward()
                 pbar.set_postfix({"loss": L.item()})
                 return L
@@ -72,4 +72,4 @@ class LDDMMRegistrator:
         for i, VS in enumerate(listpq):
             verts = VS[1].detach().cpu().numpy()
             poly = pv.PolyData.from_regular_faces(verts, faces=self.source_mesh.regular_faces)
-            poly.save(os.path.join(output_dir, f"shoot_{i}.vtp"))
+            poly.save(os.path.join(output_dir, f"shoot_{i:03}.vtp"))
