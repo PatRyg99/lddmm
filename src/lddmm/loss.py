@@ -1,6 +1,6 @@
 import torch
 
-from src.lddmm.utils import (
+from lddmm.utils import (
     GaussKernel,
     GaussLinKernel,
     Hamiltonian,

@@ -10,6 +10,12 @@ pip install .
 ```
 Now you can import `lddmm` and enjoy.
 
+Alternatively, you can install this without cloning with:
+
+```
+pip install git+https://github.com/PatRyg99/lddmm
+```
+
 ## Getting started
 
 ```python
